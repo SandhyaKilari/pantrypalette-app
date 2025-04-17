@@ -25,16 +25,6 @@ Many households struggle with unused ingredients, leading to food waste and repe
 - 🖥️ **Interactive Interface**  
   Built with Streamlit for ease of use and accessibility.
 
-## ⚙️ Tech Stack
-
-- **Python**, **Pandas**, **Scikit-learn**
-- **SQLite** (Data Repository)
-- **TF-IDF + Nearest Neighbors** (Model)
-- **MLflow** (Experiment Tracking & Registry)
-- **Streamlit** (App UI)
-- **Docker** (Deployment)
-- **Power BI** (Model Monitoring)
-
 ## 🔄 End-to-End MLOps Pipeline
 
 ### 1. 📥 Data Ingestion
