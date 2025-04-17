@@ -8,8 +8,6 @@ Many households struggle with unused ingredients, leading to food waste and repe
 - Reduce food waste
 - Explore new and exciting meal ideas
 
----
-
 ## 🚀 Features
 
 - 🔍 **Ingredient-Based Recipe Recommendations**  
@@ -27,8 +25,6 @@ Many households struggle with unused ingredients, leading to food waste and repe
 - 🖥️ **Interactive Interface**  
   Built with Streamlit for ease of use and accessibility.
 
----
-
 ## ⚙️ Tech Stack
 
 - **Python**, **Pandas**, **Scikit-learn**
@@ -38,8 +34,6 @@ Many households struggle with unused ingredients, leading to food waste and repe
 - **Streamlit** (App UI)
 - **Docker** (Deployment)
 - **Power BI** (Model Monitoring)
-
----
 
 ## 🔄 End-to-End MLOps Pipeline
 
