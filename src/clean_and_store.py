@@ -1,35 +1,75 @@
 # 📥 Data Ingestion → 🧼 Cleaning → 🧪 Combining → 🧹 Instruction Preprocessing → 🧹 Step 6: Preprocess Ingredients → 🗄️ Storing into SQLite
 
-# ===========================
-# 📥 Step 1: Data Ingestion
-# ===========================
+import os
+import re
+import ast
+import sqlite3
+import requests
+import pandas as pd
+import logging
+from datetime import datetime
+
+# NLTK setup
 import nltk
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('wordnet')
 
-import os
-import pandas as pd
-import ast
-import re
-from ast import literal_eval
-
-import sqlite3
-
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
-from nltk.tokenize import sent_tokenize
 
-# Load RecipeNLG Dataset
-df_static = pd.read_csv("/Users/sandhyakilari/Desktop/pantrypalette-app/dataset/RecipeNLG_dataset.csv")
-df_static.drop(columns=["Unnamed: 0", "link", "source", "NER"], inplace=True)
+# Setup logging
+log_dir = "logs"
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, f"ingestion_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()
+    ]
+)
+
+# ===============================
+# 📥 Step 1: Data Ingestion
+# ===============================
+def download_if_missing(path, url):
+    if not os.path.exists(path):
+        logging.info(f"📥 Downloading {path}...")
+        try:
+            r = requests.get(url, stream=True)
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            logging.info(f"✅ Successfully downloaded: {path}")
+        except Exception as e:
+            logging.error(f"❌ Failed to download {url}: {e}")
+            raise
+
+os.makedirs("dataset", exist_ok=True)
+
+download_if_missing(
+    "dataset/RecipeNLG_dataset.csv",
+    "https://huggingface.co/datasets/SandhyaKilari/RecipeNLG_dataset/resolve/main/RecipeNLG_dataset.csv"
+)
+
+download_if_missing(
+    "dataset/recipes.csv",
+    "https://raw.githubusercontent.com/nivesayee/recipe-genie/refs/heads/main/data/raw/recipes.csv"
+)
+
+# Load data
+df_static = pd.read_csv("dataset/RecipeNLG_dataset.csv")
+df_static.drop(columns=["Unnamed: 0", "link", "source", "NER"], errors="ignore", inplace=True)
 df_static.rename(columns={'title': 'Title', 'ingredients': 'Ingredients', 'directions': 'Instructions'}, inplace=True)
 df_static['Source'] = 'RecipeNLG'
 
-# Load PinchOfYum Web Scraped Dataset
-df_dynamic = pd.read_csv("/Users/sandhyakilari/Desktop/pantrypalette-app/dataset/recipes.csv")
-df_dynamic.drop(columns=["image", "description"], inplace=True)
+df_dynamic = pd.read_csv("dataset/recipes.csv")
+df_dynamic.drop(columns=["image", "description"], errors="ignore", inplace=True)
 df_dynamic.rename(columns={
     'title': 'Title',
     'ingredients': 'Ingredients',
@@ -45,14 +85,8 @@ def extract_time_from_text(text):
     if not isinstance(text, str):
         return "Not available"
     matches = re.findall(r'(\d+)\s*(minutes|min|minute|hours|hrs|hr)', text.lower())
-    total_minutes = 0
-    for value, unit in matches:
-        value = int(value)
-        if 'hour' in unit or 'hr' in unit:
-            total_minutes += value * 60
-        else:
-            total_minutes += value
-    return f"{total_minutes} minutes" if total_minutes > 0 else "Not available"
+    total_minutes = sum(int(v) * 60 if 'hour' in u else int(v) for v, u in matches)
+    return f"{total_minutes} minutes" if total_minutes else "Not available"
 
 def cap_extreme_times(val):
     try:
@@ -61,10 +95,10 @@ def cap_extreme_times(val):
     except:
         return val
 
+logging.info("⏱️ Extracting and capping estimated times...")
 df_static["Estimated Time"] = df_static["Instructions"].apply(extract_time_from_text)
 df_static["Estimated Time"] = df_static["Estimated Time"].apply(cap_extreme_times)
 df_static = df_static[df_static["Estimated Time"] != "Not available"].dropna()
-
 df_dynamic = df_dynamic.dropna().drop_duplicates()
 
 # ================================
@@ -97,7 +131,7 @@ def clean_instructions(instruction_list):
         return capitalized
 
     except Exception as e:
-        print(f"Instruction cleaning error: {e}")
+        logging.warning(f"Instruction cleaning error: {e}")
         return ""
 
 receipe_df["Instructions"] = receipe_df["Instructions"].apply(clean_instructions)
@@ -169,7 +203,7 @@ def preprocess_ingredients(ingredients):
         return ", ".join(sorted(ing.title() for ing in cleaned_ingredients))
 
     except Exception as e:
-        print(f"Preprocessing error: {e}")
+        logging.warning(f"Preprocessing error: {e}")
         return ""
 
 receipe_df['Ingredients'] = receipe_df['Ingredients'].apply(preprocess_ingredients)
@@ -177,10 +211,10 @@ receipe_df['Ingredients'] = receipe_df['Ingredients'].apply(preprocess_ingredien
 # ===============================
 # 🗄️ Step 5: Store in SQLite
 # ===============================
-os.makedirs("../database", exist_ok=True)
+os.makedirs("database", exist_ok=True)
 
-conn = sqlite3.connect("../database/recipe_data.db")
+conn = sqlite3.connect("database/recipe_data.db")
 receipe_df.to_sql("recipes", conn, if_exists="replace", index=False)
 conn.close()
 
-print("Combined and cleaned dataset stored in 'recipe_data.db' under 'recipes' table.")
+logging.info(f"Stored {len(receipe_df)} recipes in 'database/recipe_data.db'")
