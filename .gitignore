@@ -1,0 +1,12 @@
+# Ignore Mac system files
+.DS_Store
+
+# Ignore dataset files
+dataset/*.csv
+dataset/*.xlsx
+
+# Optionally ignore entire dataset folder
+# dataset/
+
+# Ignore Jupyter notebook checkpoint files
+.ipynb_checkpoints/
