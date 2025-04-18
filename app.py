@@ -18,7 +18,7 @@ import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 
 # === MLflow Setup ===
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
+mlflow.set_tracking_uri("https://060b-74-199-158-6.ngrok-free.app")
 client = MlflowClient()
 
 # === Load production-aliased model versions ===
