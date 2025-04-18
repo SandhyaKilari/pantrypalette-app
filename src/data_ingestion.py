@@ -22,13 +22,13 @@ from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize
 
 # Load RecipeNLG Dataset
-df_static = pd.read_csv("../dataset/RecipeNLG_dataset.csv")
+df_static = pd.read_csv("/Users/sandhyakilari/Desktop/pantrypalette-app/dataset/RecipeNLG_dataset.csv")
 df_static.drop(columns=["Unnamed: 0", "link", "source", "NER"], inplace=True)
 df_static.rename(columns={'title': 'Title', 'ingredients': 'Ingredients', 'directions': 'Instructions'}, inplace=True)
 df_static['Source'] = 'RecipeNLG'
 
 # Load PinchOfYum Web Scraped Dataset
-df_dynamic = pd.read_csv("../dataset/recipes.csv")
+df_dynamic = pd.read_csv("/Users/sandhyakilari/Desktop/pantrypalette-app/dataset/recipes.csv")
 df_dynamic.drop(columns=["image", "description"], inplace=True)
 df_dynamic.rename(columns={
     'title': 'Title',
@@ -177,7 +177,9 @@ receipe_df['Ingredients'] = receipe_df['Ingredients'].apply(preprocess_ingredien
 # ===============================
 # 🗄️ Step 5: Store in SQLite
 # ===============================
-conn = sqlite3.connect("recipe_data.db")
+os.makedirs("../database", exist_ok=True)
+
+conn = sqlite3.connect("../database/recipe_data.db")
 receipe_df.to_sql("recipes", conn, if_exists="replace", index=False)
 conn.close()
 
