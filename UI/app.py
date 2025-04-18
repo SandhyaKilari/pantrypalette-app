@@ -65,47 +65,79 @@ st.title("🥘 PantryPalette: Smart Recipe Recommender")
 st.sidebar.subheader("🔐 Login")
 username = st.sidebar.text_input("Username", value="guest")
 
-st.markdown("Enter ingredients below to get recipe suggestions and smart alternatives!")
-user_ingredients = st.text_input("🧂 Ingredients (comma-separated)", "chicken, onion, garlic")
+# --- Page Switcher ---
+page = st.selectbox("Choose Page", ["🔍 Recommend Recipes", "📈 Monitor Usage"])
 
-# Add slider for estimated cooking time filter
-max_time = st.slider("⏰ Max Cooking Time (minutes)", min_value=10, max_value=240, value=60, step=10)
+if page == "🔍 Recommend Recipes":
+    st.markdown("Enter ingredients below to get recipe suggestions and smart alternatives!")
+    user_ingredients = st.text_input("🧂 Ingredients (comma-separated)", "chicken, onion, garlic")
+    max_time = st.slider("⏰ Max Cooking Time (minutes)", min_value=10, max_value=240, value=60, step=10)
 
-if st.button("🔍 Find Recipes"):
-    if user_ingredients.strip():
-        start_time = time.time()
-        results, indices = recommend_recipes(user_ingredients)
-        duration = round(time.time() - start_time, 2)
-        log_query(username, user_ingredients, duration)
+    if st.button("🔍 Find Recipes"):
+        if user_ingredients.strip():
+            start_time = time.time()
+            results, indices = recommend_recipes(user_ingredients)
+            duration = round(time.time() - start_time, 2)
+            log_query(username, user_ingredients, duration)
 
-        # Filter results by max estimated time
-        results = results[results["Estimated Time"].apply(parse_minutes) <= max_time]
+            results = results[results["Estimated Time"].apply(parse_minutes) <= max_time]
 
-        st.subheader(f"🍽️ Top {len(results)} Recipes (within {max_time} mins):")
-        for idx, row in results.iterrows():
-            with st.container():
-                st.markdown(f"### 🍲 {row['Title']}")
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.markdown(f"**🧂 Ingredients Needed:**")
-                    st.markdown(f"`{row['Ingredients']}`")
-                with col2:
-                    st.markdown(f"**⏱️ Estimated Time:** `{row['Estimated Time']}`")
-                    st.markdown(f"**🌐 Source:** `{row['Source']}`")
-                with st.expander("📖 Click to view instructions"):
-                    st.markdown(row['Instructions'])
-                st.markdown("---")
+            st.subheader(f"🍽️ Top {len(results)} Recipes (within {max_time} mins):")
+            for idx, row in results.iterrows():
+                with st.container():
+                    st.markdown(f"### 🍲 {row['Title']}")
+                    col1, col2 = st.columns([2, 1])
+                    with col1:
+                        st.markdown(f"**🧂 Ingredients Needed:**")
+                        st.markdown(f"`{row['Ingredients']}`")
+                    with col2:
+                        st.markdown(f"**⏱️ Estimated Time:** `{row['Estimated Time']}`")
+                        st.markdown(f"**🌐 Source:** `{row['Source']}`")
+                    with st.expander("📖 Click to view instructions"):
+                        st.markdown(row['Instructions'])
+                    st.markdown("---")
 
-        st.subheader("🧠 Alternative Recipes with Minimal New Ingredients:")
-        alternatives = suggest_alternatives(user_ingredients, top_n=5)
-        for _, row in alternatives.iterrows():
-            st.markdown(f"**{row['Title']}** — Missing Ingredients: {row['missing_count']} | Source: {row['Source']}")
+            st.subheader("🧠 Alternative Recipes with Minimal New Ingredients:")
+            alternatives = suggest_alternatives(user_ingredients, top_n=5)
+            for _, row in alternatives.iterrows():
+                st.markdown(f"**{row['Title']}** — Missing Ingredients: {row['missing_count']} | Source: {row['Source']}")
 
-        st.subheader("📊 Grouped Recommendations by Source")
-        grouped = group_by_source(results)
-        for source, entries in grouped.items():
-            st.markdown(f"**{source}**:")
-            for item in entries:
-                st.markdown(f"- {item['Title']} ({item['Estimated Time']})")
+            st.subheader("📊 Grouped Recommendations by Source")
+            grouped = group_by_source(results)
+            for source, entries in grouped.items():
+                st.markdown(f"**{source}**:")
+                for item in entries:
+                    st.markdown(f"- {item['Title']} ({item['Estimated Time']})")
+        else:
+            st.warning("Please enter at least one ingredient.")
+
+elif page == "📈 Monitor Usage":
+    log_file = "logs/user_queries.csv"
+    if os.path.exists(log_file):
+        df_log = pd.read_csv(log_file)
+        df_log["timestamp"] = pd.to_datetime(df_log["timestamp"])
+
+        st.subheader("📊 Query Monitoring Dashboard")
+        st.metric("Total Queries", len(df_log))
+        st.metric("Avg Query Time (sec)", round(df_log["duration_sec"].mean(), 2))
+
+        st.markdown("### 👤 Top Users")
+        st.dataframe(df_log["user"].value_counts().head(5).reset_index().rename(columns={"index": "User", "user": "Queries"}))
+
+        st.markdown("### 🧂 Most Common Ingredients")
+        all_ings = ";".join(df_log["ingredient_list"].dropna()).split(";")
+        top_ings = Counter(all_ings).most_common(10)
+        st.dataframe(pd.DataFrame(top_ings, columns=["Ingredient", "Count"]))
+
+        st.markdown("### 📅 Query Volume Over Time")
+        query_by_day = df_log["timestamp"].dt.date.value_counts().sort_index()
+        st.line_chart(query_by_day)
+
+        st.markdown("### ☁️ Ingredient Word Cloud")
+        wc = WordCloud(width=800, height=300, background_color='white').generate(" ".join(all_ings))
+        fig, ax = plt.subplots()
+        ax.imshow(wc, interpolation='bilinear')
+        ax.axis("off")
+        st.pyplot(fig)
     else:
-        st.warning("Please enter at least one ingredient.")
+        st.info("ℹ️ No user query logs found yet.")
