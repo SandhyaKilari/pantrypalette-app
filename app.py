@@ -1,17 +1,20 @@
 import streamlit as st
+import streamlit as st
 import joblib
 import pandas as pd
 import sqlite3
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import TfidfVectorizer
 import os
 import datetime
 from collections import Counter
 import time
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import mlflow.sklearn
 
-# === Load model artifacts ===
-vectorizer = joblib.load("model/tfidf_vectorizer.pkl")
-model = joblib.load("model/nearest_neighbors.pkl")
+# === Load model artifacts from MLflow Registry ===
+vectorizer = mlflow.sklearn.load_model("models:/best_tfidf_vectorizer/Production")
+model = mlflow.sklearn.load_model("models:/best_nearest_neighbors_model/Production")
 
 # === Load recipe metadata ===
 conn = sqlite3.connect("database/recipe_data.db")
@@ -66,7 +69,7 @@ st.sidebar.subheader("🔐 Login")
 username = st.sidebar.text_input("Username", value="guest")
 
 # --- Page Switcher ---
-page = st.selectbox("Choose Page", ["🔍 Recommend Recipes", "📈 Monitor Usage"])
+page = st.selectbox("Choose Page", ["🔍 Recommend Recipes", "📈 Monitor Usage", "⭐ My Favorites"])
 
 if page == "🔍 Recommend Recipes":
     st.markdown("Enter ingredients below to get recipe suggestions and smart alternatives!")
@@ -82,32 +85,39 @@ if page == "🔍 Recommend Recipes":
 
             results = results[results["Estimated Time"].apply(parse_minutes) <= max_time]
 
-            st.subheader(f"🍽️ Top {len(results)} Recipes (within {max_time} mins):")
-            for idx, row in results.iterrows():
-                with st.container():
-                    st.markdown(f"### 🍲 {row['Title']}")
-                    col1, col2 = st.columns([2, 1])
-                    with col1:
-                        st.markdown(f"**🧂 Ingredients Needed:**")
-                        st.markdown(f"`{row['Ingredients']}`")
-                    with col2:
-                        st.markdown(f"**⏱️ Estimated Time:** `{row['Estimated Time']}`")
-                        st.markdown(f"**🌐 Source:** `{row['Source']}`")
-                    with st.expander("📖 Click to view instructions"):
-                        st.markdown(row['Instructions'])
-                    st.markdown("---")
+            if results.empty:
+                st.warning(f"😕 No recipes found within {max_time} minutes for the given ingredients.")
+            else:
+                st.subheader(f"🍽️ Top {len(results)} Recipes (within {max_time} mins):")
+                for idx, row in results.iterrows():
+                    with st.container():
+                        st.markdown(f"### 🍲 {row['Title']}")
+                        col1, col2 = st.columns([2, 1])
+                        with col1:
+                            st.markdown(f"**🧂 Ingredients Needed:**")
+                            st.markdown(f"`{row['Ingredients']}`")
+                        with col2:
+                            st.markdown(f"**⏱️ Estimated Time:** `{row['Estimated Time']}`")
+                            st.markdown(f"**🌐 Source:** `{row['Source']}`")
+                        with st.expander("📖 Click to view instructions"):
+                            st.markdown(row['Instructions'])
 
-            st.subheader("🧠 Alternative Recipes with Minimal New Ingredients:")
-            alternatives = suggest_alternatives(user_ingredients, top_n=5)
-            for _, row in alternatives.iterrows():
-                st.markdown(f"**{row['Title']}** — Missing Ingredients: {row['missing_count']} | Source: {row['Source']}")
+                        if st.button(f"⭐ Save '{row['Title']}' to Favorites", key=f"fav_{idx}"):
+                            st.session_state.favorites.append(dict(row))
+                            st.success("Added to favorites!")
+                        st.markdown("---")
 
-            st.subheader("📊 Grouped Recommendations by Source")
-            grouped = group_by_source(results)
-            for source, entries in grouped.items():
-                st.markdown(f"**{source}**:")
-                for item in entries:
-                    st.markdown(f"- {item['Title']} ({item['Estimated Time']})")
+                st.subheader("🧠 Alternative Recipes with Minimal New Ingredients:")
+                alternatives = suggest_alternatives(user_ingredients, top_n=5)
+                for _, row in alternatives.iterrows():
+                    st.markdown(f"**{row['Title']}** — Missing Ingredients: {row['missing_count']} | Source: {row['Source']}")
+
+                st.subheader("📊 Grouped Recommendations by Source")
+                grouped = group_by_source(results)
+                for source, entries in grouped.items():
+                    st.markdown(f"**{source}**:")
+                    for item in entries:
+                        st.markdown(f"- {item['Title']} ({item['Estimated Time']})")
         else:
             st.warning("Please enter at least one ingredient.")
 
@@ -141,3 +151,21 @@ elif page == "📈 Monitor Usage":
         st.pyplot(fig)
     else:
         st.info("ℹ️ No user query logs found yet.")
+
+elif page == "⭐ My Favorites":
+    st.subheader("⭐ Saved Recipes")
+    if not st.session_state.favorites:
+        st.info("You haven't saved any recipes yet.")
+    else:
+        for idx, row in enumerate(st.session_state.favorites):
+            st.markdown(f"### 🍲 {row['Title']}")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.markdown(f"**🧂 Ingredients Needed:**")
+                st.markdown(f"`{row['Ingredients']}`")
+            with col2:
+                st.markdown(f"**⏱️ Estimated Time:** `{row['Estimated Time']}`")
+                st.markdown(f"**🌐 Source:** `{row['Source']}`")
+            with st.expander("📖 Instructions"):
+                st.markdown(row["Instructions"])
+            st.markdown("---")
