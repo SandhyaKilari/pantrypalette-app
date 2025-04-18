@@ -2,14 +2,14 @@ import os
 import sqlite3
 import pandas as pd
 import numpy as np
+import joblib
+import mlflow
+import mlflow.sklearn
+import logging  
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import cosine_similarity
-import joblib
-import mlflow
-import mlflow.sklearn
-import logging
 
 # === Setup logging ===
 os.makedirs("logs", exist_ok=True)
@@ -32,17 +32,21 @@ conn.close()
 df = df[df["Ingredients"].notnull() & (df["Ingredients"] != "")]
 logging.info(f"Loaded {len(df)} recipes from database.")
 
+# === Optional: Use smaller sample for dev speed ===
+df = df.sample(n=20000, random_state=42)
+
 # === Train-test split (80/20) ===
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
 logging.info(f"Train size: {len(train_df)}, Test size: {len(test_df)}")
 
 # === Define hyperparameter grid for tuning ===
 param_grid = {
-    "tfidf__max_features": [1000],
-    "tfidf__ngram_range": [(1, 2)],
-    "nn__n_neighbors": [10],
+    "tfidf__max_features": [500, 1000],
+    "tfidf__ngram_range": [(1, 1), (1, 2)],
+    "nn__n_neighbors": [5, 10],
     "nn__metric": ["cosine"],
 }
+
 # Generate all combinations
 search_space = [
     (mf, ngr, nn, mt)
@@ -53,22 +57,25 @@ search_space = [
 ]
 
 # === Set up MLflow experiment ===
-mlflow.set_tracking_uri("http://localhost:5000")  # Local Tracking Server
+mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Tracking Server
 logging.info(f"Using MLflow tracking URI: {mlflow.get_tracking_uri()}")
-
 mlflow.set_experiment("PantryPalette_Recipe_Recommendation")
 
 # Track best model
 best_score = -np.inf
-best_params = None
-best_vectorizer = None
-best_model = None
+best_vectorizer, best_model, best_params = None, None, None
 
 # === Grid search through parameter combinations ===
 for max_features, ngram_range, n_neighbors, metric in search_space:
     run_name = f"TFIDF_{max_features}_NGRAM_{ngram_range}_K_{n_neighbors}_METRIC_{metric}"
     with mlflow.start_run(run_name=run_name):
-        # 1. Vectorization
+        mlflow.set_tags({
+            "stage": "training",
+            "developer": "Sandhya Kilari and Madhurya Shankar",
+            "model_type": "TFIDF + NearestNeighbors"
+        })
+
+        # TF-IDF Vectorization
         vectorizer = TfidfVectorizer(
             max_features=max_features,
             ngram_range=ngram_range,
@@ -81,9 +88,9 @@ for max_features, ngram_range, n_neighbors, metric in search_space:
         nn_model = NearestNeighbors(n_neighbors=n_neighbors, metric=metric)
         nn_model.fit(X_train)
 
-        # 3. Evaluation: measure cosine similarity between test and train
-        sims = cosine_similarity(X_test, X_train)
-        avg_sim = float(sims.max(axis=1).mean())  # average of best matches
+        # 3. Evaluation: efficient cosine similarity (1 - distance)
+        distances, _ = nn_model.kneighbors(X_test)
+        avg_sim = float(1 - distances.min(axis=1).mean())
 
         # 4. Log parameters and metric to MLflow
         mlflow.log_params({
@@ -92,8 +99,8 @@ for max_features, ngram_range, n_neighbors, metric in search_space:
             "nn_n_neighbors": n_neighbors,
             "nn_metric": metric
         })
+        
         mlflow.log_metric("test_avg_max_cosine_similarity", avg_sim)
-
         logging.info(f"[{run_name}] Avg Max Cosine Similarity: {avg_sim:.4f}")
 
         # 5. Save best model artifacts
