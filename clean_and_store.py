@@ -1,12 +1,8 @@
 # 📥 Data Ingestion → 🧼 Cleaning → 🧪 Combining → 🧹 Instruction Preprocessing → 🧹 Step 6: Preprocess Ingredients → 🗄️ Storing into SQLite
 
-import os
-import re
-import ast
-import sqlite3
-import requests
+# Import Required Libraries
+import os, re, ast, sqlite3, requests, logging
 import pandas as pd
-import logging
 from datetime import datetime
 
 # NLTK setup
@@ -38,16 +34,16 @@ logging.basicConfig(
 # ===============================
 def download_if_missing(path, url):
     if not os.path.exists(path):
-        logging.info(f"📥 Downloading {path}...")
+        logging.info(f"Downloading {path}...")
         try:
             r = requests.get(url, stream=True)
             with open(path, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
-            logging.info(f"✅ Successfully downloaded: {path}")
+            logging.info(f"Successfully downloaded: {path}")
         except Exception as e:
-            logging.error(f"❌ Failed to download {url}: {e}")
+            logging.error(f"Failed to download {url}: {e}")
             raise
 
 os.makedirs("dataset", exist_ok=True)
@@ -95,9 +91,11 @@ def cap_extreme_times(val):
     except:
         return val
 
-logging.info("⏱️ Extracting and capping estimated times...")
+logging.info("Extracting and capping estimated times...")
 df_static["Estimated Time"] = df_static["Instructions"].apply(extract_time_from_text)
 df_static["Estimated Time"] = df_static["Estimated Time"].apply(cap_extreme_times)
+
+# Drop invalid rows
 df_static = df_static[df_static["Estimated Time"] != "Not available"].dropna()
 df_dynamic = df_dynamic.dropna().drop_duplicates()
 
@@ -105,7 +103,8 @@ df_dynamic = df_dynamic.dropna().drop_duplicates()
 # 🧪 Step 3: Combine Both Sources
 # ================================
 receipe_df = pd.concat([df_static, df_dynamic], ignore_index=True)
-receipe_df.dropna()
+receipe_df.dropna(subset=["Title", "Ingredients", "Instructions"], inplace=True)
+receipe_df.drop_duplicates(subset=["Title", "Ingredients"], inplace=True)
 
 # ================================
 # 🧹 Step 4: Preprocess Instructions
@@ -139,11 +138,6 @@ receipe_df["Instructions"] = receipe_df["Instructions"].apply(clean_instructions
 # ================================
 # 🧹 Step 6: Preprocess Ingredients
 # ================================
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import stopwords
-import nltk
-nltk.download('stopwords')
-nltk.download('wordnet')
 
 lemmatizer = WordNetLemmatizer()
 stop_words = set(stopwords.words('english'))
