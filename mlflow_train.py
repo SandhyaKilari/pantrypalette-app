@@ -34,7 +34,7 @@ df = df[df["Ingredients"].notnull() & (df["Ingredients"] != "")]
 logging.info(f"Loaded {len(df)} recipes from database.")
 
 # === Optional: Use smaller sample for dev speed ===
-df = df.sample(n=100000, random_state=42)
+df = df.sample(n=30000, random_state=42)
 
 # === Train-test split (80/20) ===
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
