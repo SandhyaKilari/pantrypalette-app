@@ -1,35 +1,35 @@
+import os
+import sqlite3
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
-import pickle
-import sqlite3
-import os
+import joblib
 
-# Create model directory if not exists
-os.makedirs("../model", exist_ok=True)
+# === Baseline Training Script ===
 
-# Load cleaned data from SQLite
-conn = sqlite3.connect("../database/recipe_data.db")
+# Load cleaned recipe data
+conn = sqlite3.connect("database/recipe_data.db")
 df = pd.read_sql_query("SELECT Title, Ingredients FROM recipes", conn)
 conn.close()
+
+# Basic preprocessing: drop nulls
+df = df[df["Ingredients"].notnull() & (df["Ingredients"] != "")]
 
 # Train-test split
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
 
-# TF-IDF vectorization (1–2 grams)
+# TF-IDF vectorizer (simple config)
 vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=1000)
-X = vectorizer.fit_transform(df["Ingredients"])
+X_train = vectorizer.fit_transform(train_df["Ingredients"])
 
-# Fit Nearest Neighbors model
-nn_model = NearestNeighbors(n_neighbors=10, metric="cosine")
-nn_model.fit(X)
+# NearestNeighbors model
+model = NearestNeighbors(n_neighbors=10, metric="cosine")
+model.fit(X_train)
 
-# Save model + vectorizer
-with open("../model/nn_model.pkl", "wb") as f:
-    pickle.dump(nn_model, f)
+# Save vectorizer and model
+os.makedirs("model", exist_ok=True)
+joblib.dump(vectorizer, "model/tfidf_vectorizer_baseline.pkl")
+joblib.dump(model, "model/nearest_neighbors_baseline.pkl")
 
-with open("../model/vectorizer.pkl", "wb") as f:
-    pickle.dump(vectorizer, f)
-
-print("Model and vectorizer saved successfully.")
+print("Baseline TF-IDF + NearestNeighbors model saved.")
