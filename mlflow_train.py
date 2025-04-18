@@ -10,6 +10,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import cosine_similarity
+from mlflow.tracking import MlflowClient
 
 # === Setup logging ===
 os.makedirs("logs", exist_ok=True)
@@ -33,7 +34,7 @@ df = df[df["Ingredients"].notnull() & (df["Ingredients"] != "")]
 logging.info(f"Loaded {len(df)} recipes from database.")
 
 # === Optional: Use smaller sample for dev speed ===
-df = df.sample(n=20000, random_state=42)
+df = df.sample(n=10000, random_state=42)
 
 # === Train-test split (80/20) ===
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
@@ -130,16 +131,75 @@ try:
 except Exception as e:
     logging.error(f"Failed to save model artifacts: {e}")
 
-# === Register final best model to MLflow registry ===
-try:
-    mlflow.sklearn.log_model(
-        sk_model=best_model,
-        artifact_path="model",
-        registered_model_name="PantryPaletteNNModel"
-    )
-    logging.info("Model registered in MLflow Model Registry as 'PantryPaletteNNModel'")
-except Exception as e:
-    logging.warning(f"Could not register model to MLflow registry: {e}")
+# MLflow model registration
+# === Helper Function: Assign alias to model version based on stage ===
+def assign_alias_to_stage(model_name, stage, alias):
+    try:
+        latest_versions = client.get_latest_versions(model_name, stages=[stage])
+        if not latest_versions:
+            raise ValueError(f"No model versions found for '{model_name}' in stage '{stage}'.")
+
+        latest_mv = latest_versions[0]
+        client.set_registered_model_alias(model_name, alias, latest_mv.version)
+        logging.info(f"Alias '{alias}' assigned to version {latest_mv.version} of '{model_name}'")
+    except Exception as e:
+        logging.warning(f"Failed to assign alias '{alias}' for '{model_name}': {e}")
+
+# === Register final best model to MLflow registry and assign aliases ===
+client = MlflowClient()
+
+# === Register models in 'dev' environment ===
+mlflow.sklearn.log_model(
+    sk_model=best_vectorizer,
+    artifact_path="vectorizer",
+    registered_model_name="dev.PantryPaletteVectorizer"
+)
+mlflow.sklearn.log_model(
+    sk_model=best_model,
+    artifact_path="model",
+    registered_model_name="dev.PantryPaletteNNModel"
+)
+
+# Get latest versions just logged
+vec_version = client.get_latest_versions("dev.PantryPaletteVectorizer", stages=["None"])[0].version
+model_version = client.get_latest_versions("dev.PantryPaletteNNModel", stages=["None"])[0].version
+
+# Assign dev aliases
+client.set_registered_model_alias("dev.PantryPaletteVectorizer", "dev", vec_version)
+client.set_registered_model_alias("dev.PantryPaletteNNModel", "dev", model_version)
+
+logging.info("Registered and aliased dev models.")
+
+# === Promote to prod manually (copying not supported across names) ===
+# Load from dev
+vectorizer_uri = f"models:/dev.PantryPaletteVectorizer@dev"
+model_uri = f"models:/dev.PantryPaletteNNModel@dev"
+
+# Load the models
+vectorizer = mlflow.sklearn.load_model(vectorizer_uri)
+nn_model = mlflow.sklearn.load_model(model_uri)
+
+# Register to prod
+mlflow.sklearn.log_model(
+    sk_model=vectorizer,
+    artifact_path="vectorizer",
+    registered_model_name="prod.PantryPaletteVectorizer"
+)
+mlflow.sklearn.log_model(
+    sk_model=nn_model,
+    artifact_path="model",
+    registered_model_name="prod.PantryPaletteNNModel"
+)
+
+# Get version numbers in prod
+prod_vec_version = client.get_latest_versions("prod.PantryPaletteVectorizer", stages=["None"])[0].version
+prod_model_version = client.get_latest_versions("prod.PantryPaletteNNModel", stages=["None"])[0].version
+
+# Assign production aliases
+client.set_registered_model_alias("prod.PantryPaletteVectorizer", "production", prod_vec_version)
+client.set_registered_model_alias("prod.PantryPaletteNNModel", "production", prod_model_version)
+
+logging.info(f"Promoted to prod. Vectorizer v{prod_vec_version}, Model v{prod_model_version}")
 
 logging.info(f"Best parameters: {best_params}")
 logging.info(f"Best score: {best_score:.4f}")
