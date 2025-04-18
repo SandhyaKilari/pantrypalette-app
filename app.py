@@ -1,21 +1,42 @@
-import streamlit as st
-import streamlit as st
+# === Standard Library ===
+import datetime
+import os
+import time
+from collections import Counter
+
+# === Third-Party Libraries ===
 import joblib
+import matplotlib.pyplot as plt
 import pandas as pd
 import sqlite3
+import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
-import os
-import datetime
-from collections import Counter
-import time
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
+
+# === MLflow Integration ===
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 
-# === Load model artifacts from MLflow Registry ===
-vectorizer = mlflow.sklearn.load_model("models:/best_tfidf_vectorizer/Production")
-model = mlflow.sklearn.load_model("models:/best_nearest_neighbors_model/Production")
+# === MLflow Setup ===
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+client = MlflowClient()
 
+# === Load production-aliased model versions ===
+try:
+    vec_alias_version = client.get_model_version_by_alias("prod.PantryPaletteVectorizer", "production").version
+    model_alias_version = client.get_model_version_by_alias("prod.PantryPaletteNNModel", "production").version
+except Exception as e:
+    st.error(f"Failed to retrieve model versions by alias: {e}")
+    st.stop()
+
+# === Load models from registry ===
+try:
+    vectorizer = mlflow.sklearn.load_model(f"models:/prod.PantryPaletteVectorizer/{vec_alias_version}")
+    model = mlflow.sklearn.load_model(f"models:/prod.PantryPaletteNNModel/{model_alias_version}")
+except Exception as e:
+    st.error(f"Failed to load models from MLflow: {e}")
+    st.stop()
+    
 # === Load recipe metadata ===
 conn = sqlite3.connect("database/recipe_data.db")
 df = pd.read_sql("SELECT Title, Ingredients, Instructions, [Estimated Time], Source FROM recipes", conn)
@@ -67,6 +88,10 @@ st.title("🥘 PantryPalette: Smart Recipe Recommender")
 # --- Optional Login ---
 st.sidebar.subheader("🔐 Login")
 username = st.sidebar.text_input("Username", value="guest")
+
+# --- Initialize session state for saved favorites ----
+if "favorites" not in st.session_state:
+    st.session_state.favorites = []
 
 # --- Page Switcher ---
 page = st.selectbox("Choose Page", ["🔍 Recommend Recipes", "📈 Monitor Usage", "⭐ My Favorites"])
