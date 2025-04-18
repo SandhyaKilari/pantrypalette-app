@@ -22,4 +22,8 @@ RUN pip install -r requirements.txt
 EXPOSE 8501
 
 # === Run Streamlit app ===
+<<<<<<< HEAD
 CMD ["streamlit", "run", "UI/app.py"]
+=======
+CMD ["streamlit", "run", "app.py"]
+>>>>>>> 79b0a76 (Added workflow)
