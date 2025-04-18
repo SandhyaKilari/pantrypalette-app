@@ -1,15 +1,25 @@
+# syntax=docker/dockerfile:1
+
+# === Base image ===
 FROM python:3.10-slim
 
+# === Set working directory ===
 WORKDIR /app
 
-# Copy everything from project root into container
+# === Install system dependencies ===
+RUN apt-get update && \
+    apt-get install -y build-essential gcc curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# === Copy project files ===
 COPY . /app
 
-# Install all Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# === Install Python dependencies ===
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
 
-# Expose port used by Streamlit
+# === Expose Streamlit default port ===
 EXPOSE 8501
 
-# Run Streamlit app
-CMD ["streamlit", "run", "UI/app.py", "--server.port=8501", "--server.enableCORS=false"]
+# === Run Streamlit app ===
+CMD ["streamlit", "run", "UI/app.py"]
