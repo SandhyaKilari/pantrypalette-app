@@ -1,17 +1,56 @@
-# Ignore Mac system files
-.DS_Store
-*.DS_Store
-
-# Ignore dataset files
-dataset/*.csv
-dataset/*.xlsx
-*.db
-*.pkl
-
-# Optionally ignore entire dataset folder
+# ========================
+# Optional Project Folders
+# ========================
 # dataset/
 # database/
 # model/
+# processed/
 
-# Ignore Jupyter notebook checkpoint files
+# ========================
+# Python & Notebooks
+# ========================
+__pycache__/
+*.py[cod]
+*.egg-info/
 .ipynb_checkpoints/
+
+# ========================
+# Environment & Secrets
+# ========================
+.env
+.venv/
+*.env
+
+# ========================
+# OS & Editor-Specific
+# ========================
+.DS_Store
+.vscode/
+
+# ========================
+# Data Files
+# ========================
+*.db
+*.pkl
+dataset/*.csv
+dataset/*.xlsx
+database/*.db
+processed/*.csv
+
+# ========================
+# Logs
+# ========================
+logs/
+*.log
+
+# ========================
+# MLflow Artifacts
+# ========================
+mlruns/
+mlartifacts/
+
+# ========================
+# Docker
+# ========================
+*.tar
+*.img
