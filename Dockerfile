@@ -1,29 +1,20 @@
-# syntax=docker/dockerfile:1
-
-# === Base image ===
+# Dockerfile
 FROM python:3.10-slim
 
-# === Set working directory ===
+# Set working directory
 WORKDIR /app
 
-# === Install system dependencies ===
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libglib2.0-0 \
-    libsm6 \
-    libxrender1 \
-    libxext6 \
-    && rm -rf /var/lib/apt/lists/*
-
-# === Copy project files ===
+# Copy project files into container
 COPY . /app
 
-# === Install Python dependencies ===
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Install system dependencies and Python packages
+RUN apt-get update && apt-get install -y build-essential && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# === Expose Streamlit default port ===
+# Expose ports for Streamlit and MLflow
 EXPOSE 8501
+EXPOSE 5001
 
-# === Run Streamlit app ===
+# Launch Streamlit app
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false"]
