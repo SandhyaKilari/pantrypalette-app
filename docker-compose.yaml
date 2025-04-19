@@ -1,0 +1,31 @@
+services:
+  mlflow:
+    build: .
+    container_name: mlflow
+    command: >
+      bash -c "
+      mlflow db upgrade sqlite:///mlruns.db &&
+      mlflow server
+        --backend-store-uri sqlite:///mlruns.db
+        --default-artifact-root ./mlruns
+        --host 0.0.0.0
+        --port 5000"
+    volumes:
+      - .:/app
+    ports:
+      - "5001:5000"  # MLflow UI
+    working_dir: /app
+
+  streamlit:
+    build: .
+    container_name: streamlit
+    command: streamlit run app.py --server.port=8501 --server.enableCORS=false --server.enableXsrfProtection=false
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"  # Streamlit App
+    depends_on:
+      - mlflow
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    working_dir: /app
