@@ -58,7 +58,7 @@ search_space = [
 ]
 
 # === Set up MLflow experiment ===
-mlflow.set_tracking_uri("http://mlflow:5001") # Local Tracking Server
+mlflow.set_tracking_uri("http://mlflow:5000") # Local Tracking Server
 logging.info(f"Using MLflow tracking URI: {mlflow.get_tracking_uri()}")
 mlflow.set_experiment("PantryPalette_Recipe_Recommendation")
 
