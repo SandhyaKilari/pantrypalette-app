@@ -2,15 +2,17 @@ services:
   mlflow:
     build: .
     command: >
-      bash -c "mlflow db upgrade sqlite:///mlruns/mlflow.db &&
-               mlflow server --backend-store-uri sqlite:///mlruns/mlflow.db \
-               --default-artifact-root /app/mlruns \
-               --host 0.0.0.0 --port 5000"
+      bash -c "mlflow db upgrade sqlite:///mlruns/mlruns.db &&
+               mlflow server \
+               --backend-store-uri sqlite:///mlruns/mlruns.db \
+               --default-artifact-root ./mlruns \
+               --host 0.0.0.0 \
+               --port 5001"
     volumes:
       - .:/app
     working_dir: /app
     ports:
-      - "5001:5000"
+      - "5001:5001"
 
   streamlit:
     build: .
@@ -23,4 +25,4 @@ services:
     depends_on:
       - mlflow
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
