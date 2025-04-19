@@ -18,7 +18,7 @@ import mlflow.sklearn
 from mlflow.tracking import MlflowClient
 
 # === MLflow Setup ===
-mlflow.set_tracking_uri("http://127.0.0.1:5000") # Local Server
+mlflow.set_tracking_uri("http://host.docker.internal:5001")
 client = MlflowClient()
 
 # === Load production-aliased model versions ===
@@ -39,7 +39,7 @@ except Exception as e:
     
 # === Load recipe metadata ===
 conn = sqlite3.connect("database/recipe_data.db")
-df = pd.read_sql("SELECT Title, Ingredients, Instructions, [Estimated Time], Source FROM recipes", conn)
+df = pd.read_sql("SELECT Title, Ingredients, Instructions, Estimated Time, Source FROM recipes", conn)
 conn.close()
 
 # === Helper: Recommend recipes ===

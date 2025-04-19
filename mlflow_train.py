@@ -58,7 +58,7 @@ search_space = [
 ]
 
 # === Set up MLflow experiment ===
-mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Local Tracking Server
+mlflow.set_tracking_uri("http://localhost:5001") # Local Tracking Server
 logging.info(f"Using MLflow tracking URI: {mlflow.get_tracking_uri()}")
 mlflow.set_experiment("PantryPalette_Recipe_Recommendation")
 
@@ -170,7 +170,6 @@ client.set_registered_model_alias("dev.PantryPaletteNNModel", "dev", model_versi
 
 logging.info("Registered and aliased dev models.")
 
-# === Promote to prod manually (copying not supported across names) ===
 # Load from dev
 vectorizer_uri = f"models:/dev.PantryPaletteVectorizer@dev"
 model_uri = f"models:/dev.PantryPaletteNNModel@dev"
