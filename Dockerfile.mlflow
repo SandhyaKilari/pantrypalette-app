@@ -1,0 +1,14 @@
+# Dockerfile.mlflow
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY . /app
+
+RUN apt-get update && apt-get install -y build-essential && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+EXPOSE 5000
+
+# Set default command for MLflow server
+CMD ["mlflow", "server", "--backend-store-uri", "sqlite:///mlruns/mlruns.db", "--default-artifact-root", "./mlruns", "--host", "0.0.0.0", "--port", "5000"]
