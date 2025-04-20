@@ -19,7 +19,7 @@ import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
-from sklearn.metrics.pairwise import cosine_similarity 
+from sklearn.metrics.pairwise import cosine_similarity  # noqa: F401 (future use)
 from wordcloud import WordCloud
 
 # ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ def add_favorite(username: str, row: dict):
                 row["Title"].strip(),
                 row["Ingredients"],
                 row["Instructions"],
-                row["Estimated Time"],
+                row["estimated_time"],
                 row["Source"],
                 datetime.datetime.utcnow().isoformat(),
             ),
@@ -186,7 +186,10 @@ except Exception as e:
 # ---------------------------------------------------------------------------
 conn = get_conn(RECIPE_DB_PATH)
 df_recipes = pd.read_sql(
-    'SELECT Title, Ingredients, Instructions, "Estimated Time", Source FROM recipes',
+    '''SELECT Title, Ingredients, Instructions, 
+              "Estimated Time" AS estimated_time, 
+              Source 
+       FROM recipes''',
     conn
 )
 conn.close()
@@ -244,7 +247,7 @@ def suggest_alternatives(input_ings: str, top_n: int = 5, max_time: int = None) 
     temp['common_count'] = temp['ing_set'].apply(lambda s: len(s & user_set))
     alts = temp[(temp['common_count'] >= N - 1) & (temp['common_count'] < N)].copy()
     if max_time is not None:
-        alts['time_min'] = alts['Estimated Time'].apply(parse_minutes)
+        alts['time_min'] = alts['estimated_time'].apply(parse_minutes)
         alts = alts[alts['time_min'] <= max_time]
     alts['missing_count'] = N - alts['common_count']
     alts['missing_ingredients'] = alts['ing_set'].apply(lambda s: user_set - s)
@@ -253,7 +256,7 @@ def suggest_alternatives(input_ings: str, top_n: int = 5, max_time: int = None) 
 
 def group_by_source(recipes: pd.DataFrame) -> dict:
     grouped = recipes.groupby('Source').apply(
-        lambda x: x[['Title','Estimated Time']].to_dict('records')
+        lambda x: x[['Title','estimated_time']].to_dict('records')
     )
     return grouped.to_dict()
 
@@ -277,41 +280,64 @@ st.set_page_config(page_title='PantryPalette', layout='wide', page_icon='🍳')
 
 # Sidebar – Auth
 st.sidebar.title('PantryPalette')
-auth_choice = st.sidebar.radio('Account', ['Login','Register'], key='auth_choice')
+if 'auth_page' not in st.session_state:
+    st.session_state.auth_page = 'Login'
 
+# Sidebar - Auth
+auth_choice = st.sidebar.radio(
+    'Account',
+    ['Login', 'Register'],
+    index=0 if st.session_state.auth_page == 'Login' else 1,
+    key='auth_radio'
+)
+
+# Add to session state initialization
+if 'reg_key_suffix' not in st.session_state:
+    st.session_state.reg_key_suffix = 0
+
+# Modified registration section
 if auth_choice == 'Register':
     st.sidebar.subheader('Create Account')
-    reg_user = st.sidebar.text_input('👤 Username', key='reg_user')
-    reg_pass = st.sidebar.text_input('🔑 Password', type='password', key='reg_pass')
+    # Use dynamic keys based on suffix
+    reg_user = st.sidebar.text_input(
+        '👤 Username', 
+        key=f'reg_user_{st.session_state.reg_key_suffix}'
+    )
+    reg_pass = st.sidebar.text_input(
+        '🔑 Password', 
+        type='password', 
+        key=f'reg_pass_{st.session_state.reg_key_suffix}'
+    )
     
     if st.sidebar.button('✍️ Register'):
         if register_user(reg_user, reg_pass):
             st.sidebar.success('Registration successful. Please login.')
-            st.session_state.auth_choice = 'Login'
-            st.session_state.reg_user = ''
-            st.session_state.reg_pass = ''
-            if 'login_user' in st.session_state:
-                del st.session_state.login_user
-            if 'login_pass' in st.session_state:
-                del st.session_state.login_pass
+            # Update auth state
+            st.session_state.auth_page = 'Login'
+            # Change key suffix to reset widgets next time
+            st.session_state.reg_key_suffix += 1
         else:
             st.sidebar.error('Username exists or invalid.')
 
 else:  # Login section
     st.sidebar.subheader('Login')
-    login_user = st.sidebar.text_input('Username', key='login_user')
-    login_pass = st.sidebar.text_input('Password', type='password', key='login_pass')
+    login_user = st.sidebar.text_input(
+        'Username', 
+        key=f'login_user_{st.session_state.reg_key_suffix}'
+    )
+    login_pass = st.sidebar.text_input(
+        'Password', 
+        type='password', 
+        key=f'login_pass_{st.session_state.reg_key_suffix}'
+    )
     
     if st.sidebar.button('🔐 Login'):
         if authenticate(login_user, login_pass):
             st.session_state.user = login_user
             st.sidebar.success(f'Welcome, {login_user}!')
             st.session_state.favorites_df = fetch_favorites(login_user)
-            del st.session_state.login_user
-            del st.session_state.login_pass
         else:
             st.sidebar.error('Invalid credentials.')
-
 
 current_user = st.session_state.get('user')
 fav_columns = ['title', 'ingredients', 'instructions', 'est_time', 'source', 'saved_at']
@@ -360,7 +386,7 @@ if page == '🔍 Recommend Recipes':
             duration = round(time.time() - t0, 2)
             if current_user:
                 log_query(current_user, user_ings, duration)
-            results = results[results['Estimated Time'].apply(parse_minutes) <= max_time]
+            results = results[results['estimated_time'].apply(parse_minutes) <= max_time]
             st.session_state['latest_results'] = results
             if results.empty:
                 st.warning(f'No recipes ≤ {max_time} mins containing all: {user_ings}')
@@ -376,7 +402,7 @@ if page == '🔍 Recommend Recipes':
                         saved = title_norm in saved_norms.values
                         with cols[j]:
                             st.markdown(f"#### 🍲 {row['Title']}")
-                            st.markdown(f"**⏱️ {row['Estimated Time']}** | 🌐 {row['Source']}")
+                            st.markdown(f"**⏱️ {row['estimated_time']}** | 🌐 {row['Source']}")
                             highlighted_ings = highlight_ingredients(row['Ingredients'], user_ings)
                             st.markdown(f"**Ingredients:** {highlighted_ings}", unsafe_allow_html=True)
                             with st.expander('📖 Instructions'):
@@ -455,7 +481,7 @@ elif page == '📊 Dashboard & Monitoring':
             for src, items in group_by_source(latest).items():
                 with st.expander(f"{src} ({len(items)})"):
                     for itm in items:
-                        st.markdown(f"• {itm['Title']} – {itm['Estimated Time']}")
+                        st.markdown(f"• {itm['Title']} – {itm['estimated_time']}")
 
 else:
     st.title('⭐ My Favorites')
