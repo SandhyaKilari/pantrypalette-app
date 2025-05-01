@@ -1,30 +1,27 @@
 services:
-  mlflow:
-    build: .
-    command: sh -c "mlflow server --backend-store-uri sqlite:///mlruns/mlruns.db --default-artifact-root ./mlruns --host 0.0.0.0 --port 5000"
-    volumes:
-      - .:/app
-    working_dir: /app
-    ports:
-      - "5001:5000" 
-    networks:
-      - pantrynet
-
   streamlit:
-    build: .
+    image: sandhyakilari/pantrypalette:latest
     command: streamlit run app.py --server.port=8501 --server.enableCORS=false
-    volumes:
-      - .:/app
-    working_dir: /app
     ports:
       - "8501:8501"
-    depends_on:
-      - mlflow
+    volumes:
+      - ./logs:/app/logs
+      - ./database:/app/database
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     networks:
       - pantrynet
-
+      
+  mlflow:
+    image: sandhyakilari/pantrypalette-mlflow:latest
+    command: mlflow server --backend-store-uri sqlite:///mlruns/mlruns.db --default-artifact-root /app/mlruns --host 0.0.0.0 --port 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logs:/app/logs
+      - ./mlruns:/app/mlruns
+    networks:
+      - pantrynet
 networks:
   pantrynet:
     driver: bridge

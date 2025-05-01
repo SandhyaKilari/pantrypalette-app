@@ -224,12 +224,13 @@ def highlight_ingredients(ingredients_str: str, user_input: str, color: str = "#
     return ', '.join(highlighted)
 
 
+@st.cache_data
 def recommend_recipes(user_input: str, top_n: int) -> pd.DataFrame:
     mask = filter_by_user_ingredients(user_input)
     if not mask.any():
         return pd.DataFrame()
     user_vec = vectorizer.transform([user_input])
-    dists, idxs = model.kneighbors(user_vec, n_neighbors=model.n_samples_fit_)
+    dists, idxs = model.kneighbors(user_vec, n_neighbors=500)
     dists, idxs = dists.flatten(), idxs.flatten()
     filtered = [(i, d) for i, d in zip(idxs, dists) if mask.iat[i]]
     sel_idxs = [i for i, _ in filtered[:top_n]]
