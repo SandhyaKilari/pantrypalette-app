@@ -45,4 +45,4 @@ Both containers can be run locally or on a cloud VM using:
 docker-compose up -d
 ```
 
-🔗 For detailed deployment steps and system architecture, refer to the PantryPalette_EC2_Docker_Deploy.md guide.
+🔗 **For detailed deployment steps and system architecture, refer to the** [PantryPalette_EC2_Docker_Deploy.md](https://github.com/sandhyakilari/pantrypalette-app/blob/main/PantryPalette_Documentation/PantryPalette_EC2_Docker_Deploy.md) **guide.**
