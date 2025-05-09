@@ -43,16 +43,14 @@ Many households struggle with unused ingredients, leading to food waste and repe
 
 ### 5. 🌐 Streamlit App Deployment
 - Integrate model predictions into a user-facing **Streamlit** application
-
-### 6. 🐳 Dockerized Application
-- Package the app using **Docker** for reproducible, portable deployment
-
-### 7. 📈 Model Monitoring
-- **Power BI** dashboard tracks:
+- Streamlit dashboard tracks:
   - Usage metrics (number of queries)
   - Average response time
   - Recipe selection trends
   - Matching effectiveness
+
+### 6. 🐳 Dockerized Application
+- Package the app using **Docker** for reproducible, portable deployment
 
 ## 👥 Team Members  
 👩‍💻 **Madhurya Shankar**  
