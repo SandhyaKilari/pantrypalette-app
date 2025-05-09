@@ -32,8 +32,8 @@ Many households struggle with unused ingredients, leading to food waste and repe
 ## 🔄 End-to-End MLOps Pipeline
 
 ### 1. 📥 Data Ingestion
-- Static dataset: `RecipeNLG.csv`  
-- Dynamic web scraping from **Pinch of Yum**
+- Static dataset: [**RecipeNLG.csv**](https://huggingface.co/datasets/SandhyaKilari/RecipeNLG_dataset/resolve/main/RecipeNLG_dataset.csv)  
+- Dynamic web scraping from [**Pinch of Yum Recipes**](https://github.com/sandhyakilari/pantrypalette-app/blob/main/PinchofYum_WebScraped/recipes.csv)
 
 ### 2. 🗄️ Data Storage
 - Combined, cleaned, and preprocessed data stored in a [**SQLite database**](https://huggingface.co/datasets/SandhyaKilari/recipes_data/blob/main/database/recipe_data.db)
@@ -58,7 +58,7 @@ A user-friendly Streamlit app delivers real-time recommendations using the train
   - Popular recipes  
   - Cosine similarity-based match scores  
 
-Logs are saved for monitoring and can be visualized in **Power BI**.
+Logs are saved for monitoring and can be visualized.
 
 ### 6. 🐳 Dockerized Application
 - Containerized using **Docker** for reproducible, portable deployment
