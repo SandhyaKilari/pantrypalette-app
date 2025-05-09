@@ -1,22 +1,33 @@
 # 🍽️ PantryPalette: Smart Recipe Recommendation System
 
-PantryPalette is a Streamlit-based web app that recommends recipes based on your available ingredients. It also logs all predictions and model training using MLflow. This setup uses Docker to deploy both the MLflow backend and the Streamlit frontend.
+PantryPalette is a Streamlit-based web app that recommends recipes based on your available ingredients. It logs all user interactions and model training metadata via MLflow. Both services are containerized and deployed using Docker.
 
 ---
 
 ## 📦 Components
 
-- **Streamlit App** — User interface for entering ingredients and viewing recommendations.
-- **MLflow Tracking Server** — Manages experiment logging and model registry.
-- **Docker Containers** — Easy deployment and isolation of services.
+- **Streamlit App** — User interface to enter ingredients and view recipe recommendations.
+- **MLflow Server** — Tracks model experiments, logs, and registry.
+- **Docker Compose** — Used to deploy both services on any host (e.g., EC2).
 
 ---
 
-## 🚀 How to Run (Docker Setup)
+## 🚀 Deploy on AWS EC2 (Ubuntu)
 
 ### 🧰 Prerequisites
 
-- Docker installed ([Get Docker](https://docs.docker.com/get-docker/))
+- An AWS EC2 instance (Ubuntu 20.04 or later)
+- Security group open to:
+  - Port `22` for SSH
+  - Port `8501` for Streamlit
+  - Port `5000` for MLflow
+- Docker & Docker Compose installed:
+  ```bash
+  sudo apt update
+  sudo apt install docker.io docker-compose -y
+  sudo usermod -aG docker $USER
+  newgrp docker
+  ```
 
 ---
 
@@ -29,71 +40,81 @@ docker pull sandhyakilari/pantrypalette-mlflow:latest
 
 ---
 
-### 🧠 Step 2: Run MLflow Tracking Server
+### 📂 Step 2: Upload Project Files
+
+Upload the following files to your EC2 instance:
+
+- `docker-compose.yaml`
+- Create empty folders:
+  ```bash
+  mkdir logs database mlruns
+  ```
+
+You can use `scp` from your local machine:
 
 ```bash
-docker run -d \
-  --name mlflow-server \
-  -p 5001:5000 \
-  sandhyakilari/pantrypalette-mlflow:latest
+scp docker-compose.yaml ubuntu@<EC2-IP>:/home/ubuntu/
 ```
 
-- MLflow UI: http://localhost:5001
-
----
-
-### 🖥️ Step 3: Run Streamlit App
-
-```bash
-docker run -d \
-  --name pantrypalette-app \
-  -e MLFLOW_TRACKING_URI=http://host.docker.internal:5001 \
-  -p 8501:8501 \
-  sandhyakilari/pantrypalette:latest
-```
-
-- App UI: http://localhost:8501
-
-> 💡 On Linux, if `host.docker.internal` doesn't work, replace it with the output of `ip route | grep docker0` (usually `172.17.0.1`).
-
----
-
-## 🛠️ Development Mode (Optional)
-
-To develop locally with Docker Compose:
+Or use `Git` if it's hosted on GitHub:
 
 ```bash
 git clone https://github.com/sandhyakilari/pantrypalette.git
 cd pantrypalette
-docker-compose up --build
 ```
 
-Then:
-- Visit [localhost:8501](http://localhost:8501) for the app
-- Visit [localhost:5001](http://localhost:5001) for MLflow
-
 ---
 
-## 🧪 Features
-
-- Ingredient-based recipe matching
-- Alternative ingredient suggestions
-- MLflow experiment logging
-- Cosine similarity + TF-IDF model
-- Grouped views by recipe source
-- Usage analytics & monitoring
-
----
-
-## 🛑 Stop & Clean Containers
+### 🧠 Step 3: Launch Services with Docker Compose
 
 ```bash
-docker stop pantrypalette-app mlflow-server
-docker rm pantrypalette-app mlflow-server
+docker-compose up -d
+```
+
+This will:
+- Start MLflow at `http://<EC2-IP>:5000`
+- Start Streamlit at `http://<EC2-IP>:8501`
+
+---
+
+### 🔗 Sample Output
+
+- **Streamlit UI** → http://`<your-ec2-ip>`:8501
+- **MLflow UI** → http://`<your-ec2-ip>`:5000
+
+You can access these URLs in your browser (make sure the security group allows inbound HTTP access to these ports).
+
+---
+
+## 🧪 Key Features
+
+- TF-IDF + Cosine Similarity for ingredient matching
+- Grouped views by recipe source
+- Alternative ingredient suggestions
+- MLflow experiment logging and versioning
+- Local logging of queries for usage analytics
+- Dockerized deployment for easy reproducibility
+
+---
+
+## 🛑 Stop & Clean
+
+To stop and remove containers:
+
+```bash
+docker-compose down
+```
+
+To remove volumes:
+
+```bash
+docker-compose down -v
 ```
 
 ---
 
-## 👩‍💻 Author
+## 👩‍💻 Authors
 
-Worked By: Sandhya Kilari & Madhurya Shankar
+Created by:
+- **Sandhya Kilari**  
+- **Madhurya Shankar**
