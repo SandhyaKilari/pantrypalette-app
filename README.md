@@ -3,54 +3,73 @@
 ## 📌 Problem Statement
 Many households struggle with unused ingredients, leading to food waste and repetitive meals. Finding new recipes can be time-consuming—especially for individuals with dietary restrictions.
 
-**PantryPalette** addresses this by offering a seamless, ingredient-based recipe discovery experience to help users:
-- Maximize grocery utility
-- Reduce food waste
-- Explore new and exciting meal ideas
+**PantryPalette** solves this by offering a seamless, ingredient-based recipe discovery experience that helps users:
+- Maximize grocery utility  
+- Reduce food waste  
+- Explore new and exciting meal ideas  
+
+---
 
 ## 🚀 Features
 
 - 🔍 **Ingredient-Based Recipe Recommendations**  
-  Enter what you have, and get personalized recipe suggestions.
+  Enter what you have and get personalized recipe suggestions.
 
 - 🌱 **Reduce Food Waste**  
   Discover creative ways to use leftovers and pantry staples.
 
 - 🍽️ **Minimal Add-on Ingredients**  
-  Get recipes that require very few extra items.
+  Get recipes that require very few additional items.
 
 - 🌐 **Real-Time Recipe Integration**  
-  Pulls dynamic recipe content via web scraping and Spoonacular API.
+  Combines dynamic web scraping with the Spoonacular API for updated results.
 
 - 🖥️ **Interactive Interface**  
   Built with Streamlit for ease of use and accessibility.
 
+---
+
 ## 🔄 End-to-End MLOps Pipeline
 
 ### 1. 📥 Data Ingestion
-- `RecipeNLG.csv` (static recipe dataset)
-- Web scraped data from **PinchOfYum**
+- Static dataset: `RecipeNLG.csv`  
+- Dynamic web scraping from **Pinch of Yum**
 
 ### 2. 🗄️ Data Storage
-- All cleaned and processed data stored in a **SQLite** database
+- Combined, cleaned, and preprocessed data stored in a [**SQLite database**](https://huggingface.co/datasets/SandhyaKilari/recipes_data/blob/main/database/recipe_data.db)
 
-### 3. 📊 Feature Engineering + Model Training
-- **TF-IDF vectorization** (1–2 grams)
-- **Cosine Similarity Nearest Neighbors model** to recommend recipes
+### 3. 📊 Feature Engineering & Model Training
+- **TF-IDF vectorization** (1–2 grams)  
+- **Cosine Similarity** using Nearest Neighbors to generate recipe matches
 
 ### 4. 📦 Model Tracking & Registry
-- Use **MLflow** to track experiments and store the best model
+- Tracked using **MLflow**, with models registered for dev and prod environments
 
 ### 5. 🌐 Streamlit App Deployment
-- Integrate model predictions into a user-facing **Streamlit** application
-- Streamlit dashboard tracks:
-  - Usage metrics (number of queries)
-  - Average response time
-  - Recipe selection trends
-  - Matching effectiveness
+A user-friendly Streamlit app delivers real-time recommendations using the trained model.
+
+**Key Features:**
+- Live recipe matching from pantry inputs  
+- Smart substitutions for partial matches  
+- Visual recipe cards with ingredients and instructions  
+- Built-in analytics:
+  - Total user queries  
+  - Average response time  
+  - Popular recipes  
+  - Cosine similarity-based match scores  
+
+Logs are saved for monitoring and can be visualized in **Power BI**.
 
 ### 6. 🐳 Dockerized Application
-- Package the app using **Docker** for reproducible, portable deployment
+- Containerized using **Docker** for reproducible, portable deployment
+
+### 7. ☁️ AWS EC2 Integration
+- Deployed both Streamlit and MLflow services on an **AWS EC2 (Ubuntu)** instance  
+- Used **Docker Compose** to orchestrate multi-container setup  
+- Ports 8501 (Streamlit) and 5000 (MLflow) exposed securely  
+- Auto-restarts and logging handled via Docker for high availability  
+
+---
 
 ## 👥 Team Members  
 👩‍💻 **Madhurya Shankar**  
