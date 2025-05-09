@@ -56,7 +56,7 @@ You can use `scp` from your local machine:
 scp docker-compose.yaml ubuntu@<EC2-IP>:/home/ubuntu/
 ```
 
-Or use `Git` if it's hosted on GitHub:
+Or use `Git` as it's hosted on GitHub:
 
 ```bash
 git clone https://github.com/sandhyakilari/pantrypalette.git
